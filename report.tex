@@ -1,13 +1,14 @@
 \documentclass{article}
+\usepackage{ragged2e}
 \usepackage[a4paper, margin=1in]{geometry}
 \usepackage{amsmath}
-\usepackage{graphicx}
 
 \title{\textbf{Paper Review}}
 \author{}
 \date{}
 
 \begin{document}
+\justifying
 
 \maketitle
 
@@ -25,47 +26,24 @@ The paper investigates the optimal trade-off between model size and number of tr
 The paper makes several significant contributions to our understanding of LLM scaling laws. First, it demonstrates that current large language models are significantly undertrained and overparameterized relative to their compute budgets. Second, it establishes through multiple methodologies that model size (N) and training tokens (D) should scale equally with compute (C), contradicting previous scaling laws that favored increasing parameters over data. Finally, it validates these findings by introducing Chinchilla, a 70B parameter model that outperforms larger models like Gopher (280B) while using the same compute budget but training on more data.
 
 \subsection{Methodology}
-The authors present three complementary approaches to determine optimal scaling relationships. 
-\subsubsection{Approach 1}
-The first approach involves training multiple models of varying sizes (from 70M to 10B parameters) and training each model on four different amounts of data. The authors align learning rate schedules with training duration to ensure accurate and fair comparisons across different runs. This approach allows them to estimate the minimum achievable loss for each combination of model size, training duration, and data amount. By fitting a power-law model to the resulting data, they derive optimal scaling relationships between model size, training tokens, and compute, which helps guide efficient training strategies.
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figs/Approach1.png}
-    \caption{Training curves for models ranging from 70M to 10B parameters, trained for four different durations.}
-    \label{fig:approach1}
-\end{figure}
-\subsubsection{Approach 2}
-The second approach involves setting nine different FLOP budgets, ranging from $6 \times 10^{18}$ to $3 \times 10^{21}$ FLOPs, and varying model sizes up to 16B parameters to analyze the final training loss at each budget. This method, known as IsoFLOP profiling, helps to answer the question: What is the optimal parameter count for a given FLOP budget? To ensure a clear minimum in loss, they trained a diverse set of model sizes, capturing comprehensive data across different scales. For each IsoFLOP profile, they fitted a parabolic curve to determine the optimal model size for each FLOP budget. Then, as in the previous approach, they fitted a power-law model to the data to identify optimal scaling relationship.
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figs/Approach2.png}
-    \caption{IsoFLOP profiles for models ranging from 70M to 16B parameters, trained with nine different FLOP budgets.}
-    \label{fig:approach2}
-\end{figure}
-
-
-\subsubsection{Approach 3}
-
-The third approach proposes modeling loss as a function of parameter size and the number of tokens. Drawing from classical risk decomposition, this model defines loss as:
-
-
-$$\hat{L}(N, D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$
-
-$E$  represents the loss for an ideal generative process over the data distribution, which ideally aligns with the entropy of natural language. The second term,  $\frac{A}{N^\alpha}$ , acknowledges that even a perfectly trained transformer with  N  parameters falls short of the ideal generative process. Finally, the third term,  $\frac{B}{D^\beta}$ , captures the impact of not training the transformer to full convergence, due to limited optimization steps on a subset of the dataset.
-To estimate the parameters  $A$ ,  $B$ ,  $\alpha$ , and  $\beta$ , the authors use a Huber loss function, which is robust to outliers, with  $\delta = 10^{-3}$ and applied the L-BFGS algorithm. The fitting process also involved a grid of initializations to avoid local minima.
-For evaluating efficiency, the team used the parametric loss model to outline an efficient frontier of model performance under computational constraints. They identified optimal model and data parameters,  $N_{\text{opt}}$  and $ D_{\text{opt}}$ , by minimizing  $\hat{L}$  while adhering to the constraint  $\text{FLOPs}(N, D) \approx 6ND$ . This analysis provided a power-law relationship for  $N_{\text{opt}}$  and  $D_{\text{opt}}$ , balancing model size and data volume in a way that optimally manages computational resources.
-
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figs/Approach3.png}
-    \caption{Parametric loss model fitting for various model sizes and data amounts.}
-    \label{fig:approach3}
-\end{figure}
-
+The authors present three complementary approaches to determine optimal scaling relationships. The first approach analyzes training curves by training multiple models ranging from 70M to 10B parameters, with each model trained for four different durations using learning rate schedules matched to the training duration. This improves upon previous work that used fixed schedules which led to overestimating losses for shorter training runs. The second approach examines IsoFLOP profiles by fixing nine different FLOP budgets and varying model sizes up to 16B parameters to analyze loss versus model size at constant compute. The third approach develops a parametric model of the loss function $\hat{L}(N,D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$, fitted using Huber loss for robustness and incorporating the FLOPs constraint C = 6ND.
 
 \subsection{Results and Findings}
-All three methodological approaches converged on similar scaling coefficients, finding that optimal model size and training tokens should scale approximately as the square root of compute ($N_{opt} \propto C^{0.5}$, $D_{opt} \propto C^{0.5}$). This finding was validated through the training of Chinchilla, a 70B parameter model trained on 1.4T tokens, which consistently outperformed Gopher (280B parameters, 300B tokens) across most benchmarks despite using the same compute budget. These results strongly suggest that current large models are significantly oversized for their compute budgets and would benefit from being smaller but trained on more data.
+All three methodological approaches converged on similar scaling coefficients, finding that optimal model size and training tokens should scale approximately as the square root of compute ($N_{opt} \propto C^{0.5}$, $D_{opt} \propto C^{0.5}$). Specifically for approach 1 it is observed that $N_{opt} \propto C^{0.5}$, $D_{opt} \propto C^{0.5}$. For approach 2, ($N_{opt} \propto C^{0.49}$, $D_{opt} \propto C^{0.51}$) and for approach 3, it is observed that $N_{opt} \propto C^{0.46}$, $D_{opt} \propto C^{0.54}$.  This finding was validated through the training of Chinchilla, a 70B parameter model trained on 1.4T tokens, which consistently outperformed Gopher (280B parameters, 300B tokens) across most benchmarks despite using the same compute budget. These results strongly suggest that current large models are significantly oversized for their compute budgets and would benefit from being smaller but trained on more data. \\
+
+\noindent \textbf{Language modelling:} Chinchilla outperformed Gopher on all the subsets of the Pile dataset. Also, Chinchilla achieved a perplexity of 7.16 compared to 7.75 for Gopher.
+Since Chinchilla was trained on more data, it makes more sense to use benchmarks like MMLU and BIG-bench in which the data leakage is less of a concern. \\
+
+\noindent \textbf{MMLU (Multi-Model Language Understanding:)} This consists of a range of exam-like questions on academic subjects. In this, Chinchilla outperformed Gopher by 7.6\% in the 5-shot setting compared to the accuracy of 60\% for Gopher. Chinchilla achieved an accuracy of more than 90\% on 4 different individual tasks—\texttt{high\_school\_gov\_and\_politics}, \texttt{international\_law}, \texttt{sociology}, and \texttt{us\_foreign\_policy}—which no other model has achieved.
+In some tasks like \texttt{college\_mathematics}, \texttt{econometrics}, \texttt{moral\_scenarios}, and \texttt{formal\_logic}, Chinchilla underperformed Gopher. But overall, Chinchilla outperformed Gopher in most of the tasks. \\
+
+\noindent \textbf{BIG-bench:} Similar to MMLU, Chinchilla outperformed Gopher in most of the tasks. Chinchilla showed an improvement of 10.7\% in average performance reaching an accuracy of 65.1\% versus 54.4\% for Gopher. Out of the 62 tasks, Chinchilla outperformed Gopher in 58 tasks. \\
+
+\noindent \textbf{Common sense: }When tested on various common sense benchmarks like PIQA, SIQA, Winogrande, HellaSwag, BoolQ, Chinchilla outperfomed both Gopher and GPT-3 on all tasks. It also outperformed MT-NLG 530B in all tasks except PIQA. \\
+
+\noindent \textbf{Gender bias and toxicity: } This is an important aspect to consider while training large language models. Both Chinchilla and Gopher are trained on the same data and hence have similar biases. However, Chinchilla outperformed Gopher by resolving pronouns more frequently. Especially for neutral and female pronouns, Chinchilla showed an improvement of 9.2\% and 8.3\% respectively.
+25000 samples of unprompted text were generated from Chinchilla and Gopher and were evaluated for toxicity. The mean (median) toxicity score for Gopher is 0.081 (0.064), compared to 0.087 (0.066) for Chinchilla. It can be clearly seen that increasing number of model parameters only has a marginal effect on reducing toxicity.
+
 
 \section{Critical Evaluation}
 
@@ -142,7 +120,6 @@ This work has broad implications:
     \item Descriptions of Approaches 1 and 2 could be more clearly differentiated
     \item Better explanation of the transition between different methodologies
     \item More detailed justification for specific hyperparameter choices
-    \item information on type of datasets used to train the models.
 \end{itemize}
 
 \subsubsection{Scope Considerations}
