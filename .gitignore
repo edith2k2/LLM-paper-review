@@ -1,4 +1,7 @@
 *
 
+!figs/
 !*.tex
 !*.pdf
+!.DS_Store
+!figs/.DS_Store
